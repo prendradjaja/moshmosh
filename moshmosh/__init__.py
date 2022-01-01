@@ -10,3 +10,5 @@ from .extensions import scoped_operators
 from .extensions import pipelines
 from .extensions import only_block
 from .extensions import quick_lambdas
+from .extensions import unpack_dot
+from .extensions import obj_shorthand
