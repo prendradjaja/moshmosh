@@ -6,13 +6,15 @@ import itertools
 
 class Only(Extension):
     identifier = "only-block"
-    def __init__(self):
-        self.visitor = OnlyTransformer(self.activation)
-        # will it get reused? is stateful (only_defs)
 
     def rewrite_ast(self, node):
-        node = self.visitor.visit(node)
-        node.body = self.visitor.only_defs + node.body
+        # The pattern used by thautwarm's extensions is to set self.visitor in
+        # the __init__() instead of using a local variable. My visitor is
+        # stateful. I'm not sure if the Extension (Only) object gets reused,
+        # so to be safe I'm using a local variable.
+        visitor = OnlyTransformer(self.activation)
+        node = visitor.visit(node)
+        node.body = visitor.only_defs + node.body
         return node
 
 
@@ -36,7 +38,7 @@ class OnlyTransformer(ast.NodeTransformer):
             return node
 
     def desugar_only(self, with_node):
-        # print(ast.dump(with_node, indent=2))
+        # print(ast.dump(with_node, indent=4))
 
         call = with_node.items[0].context_expr
         assert len(call.keywords) == 0, 'Not yet supported for only(): only(x=y) for arg renaming'
@@ -65,9 +67,6 @@ class OnlyTransformer(ast.NodeTransformer):
         )
         self.only_defs.append(definition)
 
-        # self.only_defs.append(ast.Expr(ast.Constant(value=1)))
-
-
         if with_node.items[0].optional_vars:  # with ... as ...:
             optional_vars = with_node.items[0].optional_vars
             assert isinstance(optional_vars, ast.Name), 'Not yet supported for only(): Destructuring assignment'
@@ -80,8 +79,7 @@ class OnlyTransformer(ast.NodeTransformer):
             )
             ast.copy_location(result, with_node)
             return result
-        else:  # 'with' without 'as'
-            # return ast.Expr(value=call)
+        else:  # with ...:  # (no 'as')
             result = ast.Expr(value=call)
             ast.copy_location(result, with_node)
             return result
